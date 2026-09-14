@@ -110,6 +110,7 @@ create table if not exists public.documents (
   issued_date date,              -- tanggal dokumen diterbitkan
   expiry_date date,              -- tanggal kedaluwarsa (opsional)
   uploaded_by uuid references public.profiles(id) on delete set null,
+  expiry_reminder_sent_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -136,13 +137,10 @@ create policy "documents_modify_own_or_admin"
     or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'administrator')
   );
 
-create policy "documents_delete_own_or_admin"
+create policy "documents_delete_admin_only"
   on public.documents for delete
   to authenticated
-  using (
-    uploaded_by = auth.uid()
-    or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'administrator')
-  );
+  using (public.is_admin());
 
 create index if not exists documents_category_idx on public.documents(category);
 create index if not exists documents_expiry_idx on public.documents(expiry_date);
@@ -166,15 +164,12 @@ create policy "storage_select_authenticated"
   using (bucket_id = 'k3-documents');
 
 -- Hapus file: pengupload sendiri atau administrator
-create policy "storage_delete_own_or_admin"
+create policy "storage_delete_admin_only"
   on storage.objects for delete
   to authenticated
   using (
     bucket_id = 'k3-documents'
-    and (
-      owner = auth.uid()
-      or exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'administrator')
-    )
+    and public.is_admin()
   );
 
 -- ============================================================

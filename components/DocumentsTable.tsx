@@ -54,6 +54,20 @@ function formatSize(bytes: number | null): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatUploadedAt(iso: string): string {
+  const date = new Date(iso);
+  const datePart = date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+  const timePart = date.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return `${datePart}, ${timePart}`;
+}
+
 export default function DocumentsTable({
   initialDocuments,
   currentUserId,
@@ -117,7 +131,7 @@ export default function DocumentsTable({
   }
 
   async function handleDelete(doc: DocumentRow) {
-    const canDelete = role === "administrator" || doc.uploaded_by === currentUserId;
+    const canDelete = role === "administrator";
     if (!canDelete) return;
     if (!confirm(`Hapus dokumen "${doc.title}"? Tindakan ini tidak bisa dibatalkan.`)) return;
 
@@ -178,13 +192,14 @@ export default function DocumentsTable({
                 <th className="px-4 py-2.5 font-medium">Kedaluwarsa</th>
                 <th className="px-4 py-2.5 font-medium">Ukuran</th>
                 <th className="px-4 py-2.5 font-medium">Diunggah oleh</th>
+                <th className="px-4 py-2.5 font-medium">Diunggah pada</th>
                 <th className="px-4 py-2.5 font-medium text-right">Aksi</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((doc) => {
                 const status = expiryStatus(doc.expiry_date);
-                const canDelete = role === "administrator" || doc.uploaded_by === currentUserId;
+                const canDelete = role === "administrator";
                 return (
                   <tr key={doc.id} className="border-t border-ink/8">
                     <td className="px-4 py-3">
@@ -206,6 +221,9 @@ export default function DocumentsTable({
                     </td>
                     <td className="px-4 py-3 text-ink/60 text-xs">
                       {doc.profiles?.email ?? "-"}
+                    </td>
+                    <td className="px-4 py-3 text-ink/60 text-xs font-mono">
+                      {formatUploadedAt(doc.created_at)}
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <button
